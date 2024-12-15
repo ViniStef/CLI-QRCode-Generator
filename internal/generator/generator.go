@@ -20,6 +20,7 @@ func (qrc QRCodeV1) InitializeMatrix() {
 	}
 
 	qrc.addPositionSquares()
+	qrc.addIndicators("www.google.com")
 
 	for i := 0; i < len(qrc.matrix); i++ {
 		fmt.Println(qrc.matrix[i])
@@ -54,4 +55,27 @@ func createSquare(matrix [][]int, rowStart, colStart int) [][]int {
 	}
 
 	return bottomSquare
+}
+
+func (qrc QRCodeV1) addIndicators(msg string) {
+	matrix := qrc.matrix
+	matrix[len(matrix)-1][len(matrix)-1] = 0
+	matrix[len(matrix)-1][len(matrix)-2] = 1
+	matrix[len(matrix)-2][len(matrix)-1] = 0
+	matrix[len(matrix)-2][len(matrix)-2] = 0
+
+	qrc.matrix = matrix
+
+	binaryMsgSize := fmt.Sprintf("%08b", len(msg))
+
+	startBinaryRow := len(matrix) - 3
+	finishBinaryRow := len(matrix) - 6
+	countCurrBinary := 0
+
+	for i := startBinaryRow; i >= finishBinaryRow; i-- {
+		for j := len(matrix) - 1; j > len(matrix)-3; j-- {
+			qrc.matrix[i][j] = int(binaryMsgSize[countCurrBinary] - '0')
+			countCurrBinary++
+		}
+	}
 }
