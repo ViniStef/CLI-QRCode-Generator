@@ -23,6 +23,7 @@ func (qrc QRCodeV1) InitializeMatrix() {
 	qrc.addPositionSquares()
 	qrc.addIndicators("www.google.com")
 	qrc.addData()
+	qrc.matrix = addTimingStrips(qrc.matrix)
 
 	for i := 0; i < len(qrc.matrix); i++ {
 		fmt.Println(qrc.matrix[i])
@@ -77,6 +78,20 @@ func createSquare(matrix [][]int, rowStart, colStart int, position string) [][]i
 	return square
 }
 
+func addTimingStrips(matrix [][]int) [][]int {
+	for i := 8; i < len(matrix)-8; i++ {
+		if i%2 == 0 {
+			matrix[i][6] = 2
+			matrix[6][i] = 2
+		} else {
+			matrix[i][6] = 1
+			matrix[6][i] = 1
+		}
+	}
+
+	return matrix
+}
+
 func (qrc QRCodeV1) addIndicators(msg string) {
 	matrix := qrc.matrix
 	matrix[len(matrix)-1][len(matrix)-1] = 0
@@ -112,6 +127,9 @@ func (qrc QRCodeV1) addData() {
 	for currIteration < (len(matrix) / 2) {
 		if goUpwards {
 			for i := startRow; i >= 0; i-- {
+				if i == 6 {
+					continue
+				}
 				for j := startCol; j > startCol-2 && j >= 0; j-- {
 					if i < len(matrix)-6 {
 						if matrix[i][j] == 0 {
@@ -129,6 +147,9 @@ func (qrc QRCodeV1) addData() {
 		} else {
 			testVar := 4
 			for i := 0; i <= startRow; i++ {
+				if i == 6 {
+					continue
+				}
 				for j := startCol - 1; j <= startCol && j >= 0; j++ {
 					if matrix[i][j] == 0 {
 						matrix[i][j] = testVar
@@ -145,7 +166,6 @@ func (qrc QRCodeV1) addData() {
 		}
 
 		startCol = startCol - 2
-
 		currIteration++
 	}
 }
