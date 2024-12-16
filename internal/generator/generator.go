@@ -12,15 +12,15 @@ type QRCode interface {
 	addData()
 }
 
-type QRCodeV1 struct {
+type QRCodeV2 struct {
 	Matrix [][]int
 }
 
-func (qrc QRCodeV1) GetMatrix() [][]int {
+func (qrc QRCodeV2) GetMatrix() [][]int {
 	return qrc.Matrix
 }
 
-func (qrc QRCodeV1) InitializeMatrix(url string) [][]int {
+func (qrc QRCodeV2) InitializeMatrix(url string) [][]int {
 	qrc.Matrix = make([][]int, 25)
 	for i := 0; i < 25; i++ {
 		qrc.Matrix[i] = make([]int, 25)
@@ -40,6 +40,10 @@ func addBlackPixel(matrix [][]int) [][]int {
 	matrix[len(matrix)-8][8] = 2
 
 	return matrix
+}
+
+func addAlignmentPattern() {
+
 }
 
 func addFormatStrips(matrix [][]int) [][]int {
@@ -65,7 +69,7 @@ func addFormatStrips(matrix [][]int) [][]int {
 
 }
 
-func (qrc QRCodeV1) addPositionSquares() {
+func (qrc QRCodeV2) addPositionSquares() {
 	qrc.Matrix = createSquare(qrc.Matrix, 0, 0, "topLeft")
 	qrc.Matrix = createSquare(qrc.Matrix, 0, 18, "topRight")
 	qrc.Matrix = createSquare(qrc.Matrix, 18, 0, "botLeft")
@@ -123,7 +127,7 @@ func addTimingStrips(matrix [][]int) [][]int {
 	return matrix
 }
 
-func (qrc QRCodeV1) addIndicators(url string) {
+func (qrc QRCodeV2) addIndicators(url string) {
 	matrix := qrc.Matrix
 	matrix[len(matrix)-1][len(matrix)-1] = 0
 	matrix[len(matrix)-1][len(matrix)-2] = 1
@@ -158,7 +162,7 @@ func stringToBinary(s string) string {
 	return b.String()
 }
 
-func (qrc QRCodeV1) addData(url string) {
+func (qrc QRCodeV2) addData(url string) {
 	matrix := qrc.Matrix
 
 	binaryUrl := stringToBinary(url)
@@ -206,7 +210,7 @@ func (qrc QRCodeV1) addData(url string) {
 				if i == 6 {
 					continue
 				}
-				for j := startCol - 1; j <= startCol && j >= 0; j++ {
+				for j := startCol; j >= startCol-1 && j >= 0; j-- {
 					if currBinary == len(binaryUrl) {
 						break
 					}
