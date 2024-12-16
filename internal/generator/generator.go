@@ -27,6 +27,7 @@ func (qrc QRCodeV1) InitializeMatrix(url string) [][]int {
 	}
 
 	qrc.addPositionSquares()
+	qrc.Matrix = addFormatStrips(qrc.Matrix)
 	qrc.addIndicators(url)
 	qrc.Matrix = addBlackPixel(qrc.Matrix)
 	qrc.Matrix = addTimingStrips(qrc.Matrix)
@@ -39,6 +40,29 @@ func addBlackPixel(matrix [][]int) [][]int {
 	matrix[len(matrix)-8][8] = 2
 
 	return matrix
+}
+
+func addFormatStrips(matrix [][]int) [][]int {
+	for i := 0; i <= 8; i++ {
+		if i != 8 {
+			matrix[8][len(matrix)-i-1] = 5
+		}
+		if i == 6 {
+			continue
+		}
+		matrix[8][i] = 5
+		matrix[i][8] = 5
+	}
+
+	for j := 0; j < 8; j++ {
+		matrix[len(matrix)-8+j][8] = 5
+		if j == 6 {
+			continue
+		}
+	}
+
+	return matrix
+
 }
 
 func (qrc QRCodeV1) addPositionSquares() {
