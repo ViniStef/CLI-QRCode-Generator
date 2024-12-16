@@ -147,13 +147,16 @@ func (qrc QRCodeV1) addData(url string) {
 
 	goUpwards := true
 
-	for currIteration < (len(matrix) / 2) {
+	for currIteration < (len(matrix)/2) && currBinary < len(binaryUrl) {
 		if goUpwards {
 			for i := startRow; i >= 0; i-- {
 				if i == 6 {
 					continue
 				}
 				for j := startCol; j > startCol-2 && j >= 0; j-- {
+					if currBinary == len(binaryUrl) {
+						break
+					}
 					if j == 6 {
 						continue
 					}
@@ -162,12 +165,12 @@ func (qrc QRCodeV1) addData(url string) {
 					}
 					if i < len(matrix)-6 {
 						if matrix[i][j] == 0 {
-							matrix[i][j] = int(binaryUrl[currBinary])
+							matrix[i][j] = int(binaryUrl[currBinary] - '0')
 							currBinary++
 						}
 					} else if startCol < len(matrix)-2 {
 						if matrix[i][j] == 0 {
-							matrix[i][j] = int(binaryUrl[currBinary])
+							matrix[i][j] = int(binaryUrl[currBinary] - '0')
 							currBinary++
 						}
 					}
@@ -189,7 +192,7 @@ func (qrc QRCodeV1) addData(url string) {
 						continue
 					}
 					if matrix[i][j] == 0 {
-						matrix[i][j] = int(binaryUrl[currBinary])
+						matrix[i][j] = int(binaryUrl[currBinary] - '0')
 						currBinary++
 					}
 				}
