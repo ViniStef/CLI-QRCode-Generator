@@ -5,5 +5,5 @@ import "QR-Code-CLI/internal/generator"
 func main() {
 	//renderer.RenderQR()
 	you := generator.QRCodeV1{}
-	you.InitializeMatrix()
+	you.InitializeMatrix("www.google.com")
 }

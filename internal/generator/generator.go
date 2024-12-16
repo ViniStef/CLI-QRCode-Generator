@@ -1,6 +1,9 @@
 package generator
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 type QRCode interface {
 	initializeMatrix()
@@ -14,17 +17,17 @@ type QRCodeV1 struct {
 	matrix [][]int
 }
 
-func (qrc QRCodeV1) InitializeMatrix() {
+func (qrc QRCodeV1) InitializeMatrix(url string) {
 	qrc.matrix = make([][]int, 21)
 	for i := 0; i < 21; i++ {
 		qrc.matrix[i] = make([]int, 21)
 	}
 
 	qrc.addPositionSquares()
-	qrc.addIndicators("www.google.com")
+	qrc.addIndicators(url)
 	qrc.matrix = addBlackPixel(qrc.matrix)
 	qrc.matrix = addTimingStrips(qrc.matrix)
-	qrc.addData()
+	qrc.addData(url)
 
 	for i := 0; i < len(qrc.matrix); i++ {
 		fmt.Println(qrc.matrix[i])
@@ -99,7 +102,7 @@ func addTimingStrips(matrix [][]int) [][]int {
 	return matrix
 }
 
-func (qrc QRCodeV1) addIndicators(msg string) {
+func (qrc QRCodeV1) addIndicators(url string) {
 	matrix := qrc.matrix
 	matrix[len(matrix)-1][len(matrix)-1] = 0
 	matrix[len(matrix)-1][len(matrix)-2] = 1
@@ -108,7 +111,7 @@ func (qrc QRCodeV1) addIndicators(msg string) {
 
 	qrc.matrix = matrix
 
-	binaryMsgSize := fmt.Sprintf("%08b", len(msg))
+	binaryMsgSize := fmt.Sprintf("%08b", len(url))
 
 	startBinaryRow := len(matrix) - 3
 	finishBinaryRow := len(matrix) - 6
@@ -122,8 +125,21 @@ func (qrc QRCodeV1) addIndicators(msg string) {
 	}
 }
 
-func (qrc QRCodeV1) addData() {
+func stringToBinary(s string) string {
+	var b strings.Builder
+
+	for _, c := range s {
+		b.WriteString(fmt.Sprintf("%08b", c))
+	}
+
+	return b.String()
+}
+
+func (qrc QRCodeV1) addData(url string) {
 	matrix := qrc.matrix
+
+	binaryUrl := stringToBinary(url)
+	var currBinary int
 
 	currIteration := 0
 	startRow := len(matrix) - 1
@@ -146,11 +162,13 @@ func (qrc QRCodeV1) addData() {
 					}
 					if i < len(matrix)-6 {
 						if matrix[i][j] == 0 {
-							matrix[i][j] = 3
+							matrix[i][j] = int(binaryUrl[currBinary])
+							currBinary++
 						}
 					} else if startCol < len(matrix)-2 {
 						if matrix[i][j] == 0 {
-							matrix[i][j] = 3
+							matrix[i][j] = int(binaryUrl[currBinary])
+							currBinary++
 						}
 					}
 				}
@@ -158,7 +176,6 @@ func (qrc QRCodeV1) addData() {
 
 			goUpwards = false
 		} else {
-			testVar := 4
 			for i := 0; i <= startRow; i++ {
 				if i == 6 {
 					continue
@@ -172,12 +189,8 @@ func (qrc QRCodeV1) addData() {
 						continue
 					}
 					if matrix[i][j] == 0 {
-						matrix[i][j] = testVar
-						if testVar == 4 {
-							testVar = 5
-						} else {
-							testVar = 4
-						}
+						matrix[i][j] = int(binaryUrl[currBinary])
+						currBinary++
 					}
 				}
 			}
