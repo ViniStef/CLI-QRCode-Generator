@@ -6,44 +6,45 @@ import (
 )
 
 type QRCode interface {
-	initializeMatrix()
+	InitializeMatrix()
 	addPositionSquares()
 	addIndicators()
 	addData()
-	render() string
 }
 
 type QRCodeV1 struct {
-	matrix [][]int
+	Matrix [][]int
 }
 
-func (qrc QRCodeV1) InitializeMatrix(url string) {
-	qrc.matrix = make([][]int, 21)
-	for i := 0; i < 21; i++ {
-		qrc.matrix[i] = make([]int, 21)
+func (qrc QRCodeV1) GetMatrix() [][]int {
+	return qrc.Matrix
+}
+
+func (qrc QRCodeV1) InitializeMatrix(url string) [][]int {
+	qrc.Matrix = make([][]int, 25)
+	for i := 0; i < 25; i++ {
+		qrc.Matrix[i] = make([]int, 25)
 	}
 
 	qrc.addPositionSquares()
 	qrc.addIndicators(url)
-	qrc.matrix = addBlackPixel(qrc.matrix)
-	qrc.matrix = addTimingStrips(qrc.matrix)
+	qrc.Matrix = addBlackPixel(qrc.Matrix)
+	qrc.Matrix = addTimingStrips(qrc.Matrix)
 	qrc.addData(url)
 
-	for i := 0; i < len(qrc.matrix); i++ {
-		fmt.Println(qrc.matrix[i])
-	}
+	return qrc.Matrix
 }
 
 func addBlackPixel(matrix [][]int) [][]int {
-	matrix[13][8] = 2
+	matrix[len(matrix)-8][8] = 2
 
 	return matrix
 }
 
 func (qrc QRCodeV1) addPositionSquares() {
-	qrc.matrix = createSquare(qrc.matrix, 0, 0, "topLeft")
-	qrc.matrix = createSquare(qrc.matrix, 0, 14, "topRight")
-	qrc.matrix = createSquare(qrc.matrix, 14, 0, "botLeft")
+	qrc.Matrix = createSquare(qrc.Matrix, 0, 0, "topLeft")
+	qrc.Matrix = createSquare(qrc.Matrix, 0, 18, "topRight")
+	qrc.Matrix = createSquare(qrc.Matrix, 18, 0, "botLeft")
 }
 
 func createSquare(matrix [][]int, rowStart, colStart int, position string) [][]int {
@@ -52,18 +53,18 @@ func createSquare(matrix [][]int, rowStart, colStart int, position string) [][]i
 	switch position {
 	case "topLeft":
 		for i := 0; i < 8; i++ {
-			square[rowStart+7][i] = 1
-			square[i][rowStart+7] = 1
+			square[rowStart+7][i] = 3
+			square[i][rowStart+7] = 3
 		}
 	case "topRight":
 		for i := 0; i < 8; i++ {
-			square[rowStart+7][i+colStart-1] = 1
-			square[i][colStart-1] = 1
+			square[rowStart+7][i+colStart-1] = 3
+			square[i][colStart-1] = 3
 		}
 	case "botLeft":
 		for i := 0; i < 8; i++ {
-			square[rowStart-1][i] = 1
-			square[i+rowStart-1][colStart+7] = 1
+			square[rowStart-1][i] = 3
+			square[i+rowStart-1][colStart+7] = 3
 		}
 	}
 
@@ -71,13 +72,9 @@ func createSquare(matrix [][]int, rowStart, colStart int, position string) [][]i
 		for j := colStart; j < colStart+7; j++ {
 			if i != rowStart && i != (rowStart+7-1) && j != colStart && j != (colStart+7-1) {
 				if i >= rowStart+2 && i <= rowStart+4 && j >= colStart+2 && j <= colStart+4 {
-					if i == rowStart+3 && j == colStart+3 {
-						square[i][j] = 1
-					} else {
-						square[i][j] = 2
-					}
+					square[i][j] = 2
 				} else {
-					square[i][j] = 1
+					square[i][j] = 3
 				}
 			} else {
 				square[i][j] = 2
@@ -94,8 +91,8 @@ func addTimingStrips(matrix [][]int) [][]int {
 			matrix[i][6] = 2
 			matrix[6][i] = 2
 		} else {
-			matrix[i][6] = 1
-			matrix[6][i] = 1
+			matrix[i][6] = 3
+			matrix[6][i] = 3
 		}
 	}
 
@@ -103,13 +100,13 @@ func addTimingStrips(matrix [][]int) [][]int {
 }
 
 func (qrc QRCodeV1) addIndicators(url string) {
-	matrix := qrc.matrix
+	matrix := qrc.Matrix
 	matrix[len(matrix)-1][len(matrix)-1] = 0
 	matrix[len(matrix)-1][len(matrix)-2] = 1
 	matrix[len(matrix)-2][len(matrix)-1] = 0
 	matrix[len(matrix)-2][len(matrix)-2] = 0
 
-	qrc.matrix = matrix
+	qrc.Matrix = matrix
 
 	binaryMsgSize := fmt.Sprintf("%08b", len(url))
 
@@ -119,7 +116,7 @@ func (qrc QRCodeV1) addIndicators(url string) {
 
 	for i := startBinaryRow; i >= finishBinaryRow; i-- {
 		for j := len(matrix) - 1; j > len(matrix)-3; j-- {
-			qrc.matrix[i][j] = int(binaryMsgSize[countCurrBinary] - '0')
+			qrc.Matrix[i][j] = int(binaryMsgSize[countCurrBinary] - '0')
 			countCurrBinary++
 		}
 	}
@@ -132,11 +129,13 @@ func stringToBinary(s string) string {
 		b.WriteString(fmt.Sprintf("%08b", c))
 	}
 
+	fmt.Println("\x1b[32;1m QRCode linking to \x1b[0m", s)
+
 	return b.String()
 }
 
 func (qrc QRCodeV1) addData(url string) {
-	matrix := qrc.matrix
+	matrix := qrc.Matrix
 
 	binaryUrl := stringToBinary(url)
 	var currBinary int
@@ -183,8 +182,10 @@ func (qrc QRCodeV1) addData(url string) {
 				if i == 6 {
 					continue
 				}
-
 				for j := startCol - 1; j <= startCol && j >= 0; j++ {
+					if currBinary == len(binaryUrl) {
+						break
+					}
 					if j == 6 {
 						continue
 					}

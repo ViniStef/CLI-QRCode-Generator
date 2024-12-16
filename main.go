@@ -1,9 +1,17 @@
 package main
 
-import "QR-Code-CLI/internal/generator"
+import (
+	"QR-Code-CLI/internal/generator"
+	"QR-Code-CLI/internal/renderer"
+	"fmt"
+)
 
 func main() {
-	//renderer.RenderQR()
 	you := generator.QRCodeV1{}
-	you.InitializeMatrix("www.google.com")
+	matrix := you.InitializeMatrix("www.google.com")
+	rows := renderer.RenderQR(matrix)
+	for i := range rows {
+		fmt.Println(rows[i])
+	}
+
 }

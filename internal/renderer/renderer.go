@@ -1,19 +1,33 @@
 package renderer
 
-import "fmt"
+import "strings"
 
-func RenderQR() {
-	black := "  "
+func RenderQR(matrix [][]int) []string {
+	renderMatrix := make([][]string, len(matrix))
+	rowSlice := make([]string, 21)
 
-	board := [21][21]string{}
-
-	for i := 0; i < 21; i++ {
-		for j := 0; j < 21; j++ {
-			board[i][j] = black
+	for i := range matrix {
+		renderMatrix[i] = make([]string, len(matrix[i]))
+		for j := range matrix[i] {
+			switch matrix[i][j] {
+			case 0, 3:
+				renderMatrix[i][j] = "\u001B[37m██\u001B[0m"
+			case 1, 2:
+				renderMatrix[i][j] = "\u001B[30m██\u001B[0m"
+			default:
+				renderMatrix[i][j] = "  "
+			}
 		}
 	}
 
-	for i := 0; i < len(board); i++ {
-		fmt.Println(board[i])
+	for _, row := range renderMatrix {
+		var b strings.Builder
+		for r := range row {
+			b.WriteString(row[r])
+		}
+		rowSlice = append(rowSlice, b.String())
 	}
+
+	return rowSlice
+
 }
