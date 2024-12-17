@@ -2,6 +2,7 @@ package generator
 
 import (
 	"fmt"
+	"math"
 	"strings"
 )
 
@@ -27,6 +28,7 @@ func (qrc QRCodeV2) InitializeMatrix(url string) [][]int {
 	}
 
 	qrc.addPositionSquares()
+	qrc.Matrix = addAlignmentPattern(qrc.Matrix)
 	qrc.Matrix = addFormatStrips(qrc.Matrix)
 	qrc.addIndicators(url)
 	qrc.Matrix = addBlackPixel(qrc.Matrix)
@@ -42,8 +44,53 @@ func addBlackPixel(matrix [][]int) [][]int {
 	return matrix
 }
 
-func addAlignmentPattern() {
+func getAlignmentCoordinates(version int) []int {
+	if version <= 1 {
+		return nil
+	}
 
+	intervals := (version / 7) + 1
+
+	distance := 4*version + 4
+
+	step := int(math.Round(float64(distance) / float64(intervals)))
+
+	if step%2 != 0 {
+		step++
+	}
+
+	coordinates := make([]int, intervals+1)
+
+	coordinates[0] = 6
+
+	for i := 1; i <= intervals; i++ {
+		coordinates[i] = 6 + distance - step*(intervals-i)
+	}
+
+	return coordinates
+}
+
+func addAlignmentPattern(matrix [][]int) [][]int {
+	coordinates := getAlignmentCoordinates(2)
+	locAlignmentPatternCenter := coordinates[1]
+
+	for i := locAlignmentPatternCenter - 2; i <= locAlignmentPatternCenter+2; i++ {
+		if i == locAlignmentPatternCenter-2 || i == locAlignmentPatternCenter+2 {
+			for j := locAlignmentPatternCenter - 2; j <= locAlignmentPatternCenter+2; j++ {
+				matrix[i][j] = 2
+				matrix[j][i] = 2
+			}
+		} else {
+			for j := locAlignmentPatternCenter - 1; j <= locAlignmentPatternCenter+1; j++ {
+				matrix[i][j] = 3
+				matrix[j][i] = 3
+			}
+		}
+	}
+
+	matrix[locAlignmentPatternCenter][locAlignmentPatternCenter] = 2
+
+	return matrix
 }
 
 func addFormatStrips(matrix [][]int) [][]int {
