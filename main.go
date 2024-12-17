@@ -8,7 +8,7 @@ import (
 
 func main() {
 	you := generator.QRCodeV2{}
-	matrix := you.InitializeMatrix("www.youtube.com")
+	matrix := you.InitializeMatrix("www.youtube.com/veritasium")
 	rows := renderer.RenderQR(matrix)
 	for i := range rows {
 		fmt.Println(rows[i])

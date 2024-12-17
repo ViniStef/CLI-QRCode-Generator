@@ -35,6 +35,10 @@ func (qrc QRCodeV2) InitializeMatrix(url string) [][]int {
 	qrc.Matrix = addTimingStrips(qrc.Matrix)
 	qrc.addData(url)
 
+	for _, val := range qrc.Matrix {
+		fmt.Println(val)
+	}
+
 	return qrc.Matrix
 }
 
@@ -204,6 +208,8 @@ func stringToBinary(s string) string {
 		b.WriteString(fmt.Sprintf("%08b", c))
 	}
 
+	b.WriteString("0000")
+
 	fmt.Println("\x1b[32;1m QRCode linking to \x1b[0m", s)
 
 	return b.String()
@@ -214,6 +220,10 @@ func (qrc QRCodeV2) addData(url string) {
 
 	binaryUrl := stringToBinary(url)
 	var currBinary int
+
+	fmt.Println(binaryUrl)
+
+	fmt.Println("0111011101110111011101110010111001111001011011110111010101110100011101010110001001100101001011100110001101101111011011010010111101110110011001010111001001101001011101000110000101110011011010010111010101101101" == "0111011101110111011101110010111001111001011011110111010101110100011101010110001001100101001011100110001101101111011011010010111101110110011001010111001001101001011101000110000101110011011010010111010101101101")
 
 	currIteration := 0
 	startRow := len(matrix) - 1
