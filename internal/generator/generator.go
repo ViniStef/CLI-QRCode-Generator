@@ -2,7 +2,10 @@ package generator
 
 import (
 	"fmt"
+	"github.com/klauspost/reedsolomon"
+	"log"
 	"math"
+	"strconv"
 	"strings"
 )
 
@@ -208,11 +211,62 @@ func stringToBinary(s string) string {
 		b.WriteString(fmt.Sprintf("%08b", c))
 	}
 
+	// terminator
 	b.WriteString("0000")
 
 	fmt.Println("\x1b[32;1m QRCode linking to \x1b[0m", s)
 
+	padByte236 := "11101100"
+	padByte17 := "00010001"
+	padBytes := []string{padByte236, padByte17}
+	currPad := 0
+
+	currByteAmount := len(b.String()) / 8
+
+	if currByteAmount < 26 {
+		for i := currByteAmount; i <= 26; i++ {
+			b.WriteString(padBytes[currPad])
+			if currPad == 0 {
+				currPad = 1
+			} else {
+				currPad = 0
+			}
+		}
+	} else if currByteAmount > 26 {
+		panic("Cannot create a version 2 QRCode with a message bigger than 26 bytes")
+	}
+
+	fmt.Println("B string aqui: ", b.String(), "Tamanho da string: ", len(b.String()))
+
 	return b.String()
+}
+
+func binaryToBytes(codificationMode, binaryMsg string) []byte {
+	var b strings.Builder
+	binaryMsgSize := fmt.Sprintf("%08b", len(binaryMsg)/8)
+
+	b.WriteString(codificationMode)
+	b.WriteString(binaryMsgSize)
+	b.WriteString(binaryMsg)
+
+	s := b.String()
+
+	var msgBytes []byte
+
+	if len(s) == 28*8 {
+		for i := 0; i < len(s); i += 8 {
+			bitGroup := s[i : i+8]
+
+			value, err := strconv.ParseUint(bitGroup, 2, 8)
+			if err != nil {
+				panic("Could not convert to base 2 8 bit representation")
+			}
+
+			msgBytes = append(msgBytes, byte(value))
+		}
+	}
+
+	return msgBytes
 }
 
 func (qrc QRCodeV2) addData(url string) {
@@ -221,9 +275,52 @@ func (qrc QRCodeV2) addData(url string) {
 	binaryUrl := stringToBinary(url)
 	var currBinary int
 
-	fmt.Println(binaryUrl)
+	msgBytes := binaryToBytes("0100", binaryUrl)
 
-	fmt.Println("0111011101110111011101110010111001111001011011110111010101110100011101010110001001100101001011100110001101101111011011010010111101110110011001010111001001101001011101000110000101110011011010010111010101101101" == "0111011101110111011101110010111001111001011011110111010101110100011101010110001001100101001011100110001101101111011011010010111101110110011001010111001001101001011101000110000101110011011010010111010101101101")
+	dataShards := 28
+	parityShards := 16
+	totalShards := dataShards + parityShards
+
+	encoder, err := reedsolomon.New(dataShards, parityShards)
+
+	if err != nil {
+		panic("Could not create reed solomon encoder")
+	}
+
+	shards := make([][]byte, totalShards)
+	for i := 0; i < dataShards; i++ {
+		shards[i] = []byte{msgBytes[i]}
+	}
+	for i := dataShards; i < totalShards; i++ {
+		shards[i] = make([]byte, 1)
+	}
+
+	err = encoder.Encode(shards)
+	if err != nil {
+		log.Fatalf("Error while codifying shards: %v", err)
+	}
+
+	_, err = encoder.Verify(shards)
+	if err != nil {
+		panic("Data shards aren't of equal size")
+	}
+
+	var b strings.Builder
+
+	for i := 0; i < dataShards; i++ {
+		for j := range shards[i] {
+			b.WriteString(fmt.Sprintf("%08b", shards[i][j]))
+		}
+	}
+
+	for i := dataShards; i < totalShards; i++ {
+		for j := range shards[i] {
+			b.WriteString(fmt.Sprintf("%08b", shards[i][j]))
+		}
+	}
+
+	// Skip the 4 first from the data mode and the next 8 from the msg length
+	urlAndCorrectionBinary := b.String()[12:]
 
 	currIteration := 0
 	startRow := len(matrix) - 1
@@ -231,14 +328,14 @@ func (qrc QRCodeV2) addData(url string) {
 
 	goUpwards := true
 
-	for currIteration < (len(matrix)/2) && currBinary < len(binaryUrl) {
+	for currIteration < (len(matrix)/2) && currBinary < len(urlAndCorrectionBinary) {
 		if goUpwards {
 			for i := startRow; i >= 0; i-- {
 				if i == 6 {
 					continue
 				}
 				for j := startCol; j > startCol-2 && j >= 0; j-- {
-					if currBinary == len(binaryUrl) {
+					if currBinary == len(urlAndCorrectionBinary) {
 						break
 					}
 					if j == 6 {
@@ -249,12 +346,12 @@ func (qrc QRCodeV2) addData(url string) {
 					}
 					if i < len(matrix)-6 {
 						if matrix[i][j] == 0 {
-							matrix[i][j] = int(binaryUrl[currBinary] - '0')
+							matrix[i][j] = int(urlAndCorrectionBinary[currBinary] - '0')
 							currBinary++
 						}
 					} else if startCol < len(matrix)-2 {
 						if matrix[i][j] == 0 {
-							matrix[i][j] = int(binaryUrl[currBinary] - '0')
+							matrix[i][j] = int(urlAndCorrectionBinary[currBinary] - '0')
 							currBinary++
 						}
 					}
@@ -268,7 +365,7 @@ func (qrc QRCodeV2) addData(url string) {
 					continue
 				}
 				for j := startCol; j >= startCol-1 && j >= 0; j-- {
-					if currBinary == len(binaryUrl) {
+					if currBinary == len(urlAndCorrectionBinary) {
 						break
 					}
 					if j == 6 {
@@ -278,7 +375,7 @@ func (qrc QRCodeV2) addData(url string) {
 						continue
 					}
 					if matrix[i][j] == 0 {
-						matrix[i][j] = int(binaryUrl[currBinary] - '0')
+						matrix[i][j] = int(urlAndCorrectionBinary[currBinary] - '0')
 						currBinary++
 					}
 				}
